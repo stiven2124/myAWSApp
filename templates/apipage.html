@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Your API Key</title>
+
+<style>
+body {
+  margin: 0;
+  padding: 0;
+  font-family: Arial, sans-serif;
+  background: #003366;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  color: white;
+}
+.container {
+  background: white;
+  color: black;
+  padding: 30px;
+  border-radius: 15px;
+  text-align: center;
+  width: 350px;
+  box-shadow: 0px 15px 20px rgba(0,0,0,0.3);
+}
+h1 {
+  font-size: 22px;
+  margin-bottom: 15px;
+}
+.key-box {
+  background: #f0f0f0;
+  padding: 10px;
+  border-radius: 10px;
+  margin: 15px 0;
+  font-size: 18px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  word-break: break-all;
+}
+button {
+  background: #003366;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 10px;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+}
+button:hover {
+  background: #0059b3;
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>Your API Key</h1>
+  <p>Keep this key private. It lets you access the API.</p>
+
+  <div class="key-box" id="apikey-box">
+      {{api_key}}
+  </div>
+
+  <button onclick="copyKey()">Copy Key</button>
+</div>
+
+<script>
+function copyKey() {
+  const key = document.getElementById("apikey-box").innerText;
+  navigator.clipboard.writeText(key);
+  alert("API Key copied to clipboard!");
+}
+</script>
+
+</body>
+</html>
