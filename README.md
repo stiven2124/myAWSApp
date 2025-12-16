@@ -8,19 +8,15 @@ based on their location (retrieved from CloudFront headers).
 ⸻
 Architecture Overview
 
-Frontend (EC2 Instances)
-
-Three separate EC2 instances serve static/dynamic web pages:
+Frontend (EC2 Instance)
+One EC2 instance serves web pages:
 	1.	Login / Register Page
 	•	Allows users to create accounts and authenticate.
 	•	Interacts with RDS for user credentials and profile storage.
 	2.	User Dashboard
 	•	Displays user' API KEY
-	3.	Landing / Main Web Page
-	•	The entry point of the platform.
-
+	
 ⸻
-
 Backend (Lambda + Docker on ECR)
 
 All backend microservices are packaged as Docker images, stored in Amazon ECR, and run inside AWS Lambda.
@@ -32,7 +28,7 @@ All backend microservices are packaged as Docker images, stored in Amazon ECR, a
 
 2. Events Service Lambda
 	•	Pulls image from ECR.
-	•	Returns nearby events based on user geolocation from CloudFront headers.
+	•	Returns nearby events again based on user geolocation from CloudFront headers.
 
 3. Authentication Lambda
 	•	Provides authentication logic for API Gateway.
@@ -40,7 +36,6 @@ All backend microservices are packaged as Docker images, stored in Amazon ECR, a
 	•	Integrated into API Gateway as a custom Lambda Authorizer.
 
 ⸻
-
 CloudFront
 	•	Distributes traffic globally.
 	•	Passes user geolocation to backend via headers such as:
@@ -50,7 +45,6 @@ CloudFront
 These headers are consumed by the Weather and Events Lambdas.
 
 ⸻
-
 API Gateway
 	•	Exposes REST endpoints for:
 	•	/weather
@@ -60,7 +54,6 @@ API Gateway
 	•	Connects downstream to Weather and Events Lambdas.
 
 ⸻
-
 RDS (Relational Database Service)
 
 Stores:
@@ -71,23 +64,20 @@ Stores:
 Connected via secure networking (private subnets, SGs, IAM roles).
 
 ⸻
-
 Microservice Responsibilities
 
 Weather Service
-	•	Input: Location (lat/long and CloudFront city/country headers)
+	•	Input: Location (lat/long and CloudFront city/country headers), API key (query string that gets converted to a header on cloudfront)
 	•	Output: JSON weather data
 	•	Dependencies: external weather API provider
 
-Events Service
-	•	Input: Same CloudFront geolocation data
+Events Service (in development)
+	•	Input: Same CloudFront geolocation data and api key
 	•	Output: List of events near the user
 	•	Dependencies: external events API provider
 
 Authentication Service
-	•	Handles:
-	•	Login
-	•	Registration
+Handles:
 	•	API key validation
 	•	Used as Lambda Authorizer in API Gateway
 
