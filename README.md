@@ -1,91 +1,43 @@
-Cloud-Based Microservices Platform
+# AWS Weather API & User Portal
 
-This project is a cloud-native architecture built on AWS, combining EC2-hosted frontend pages,
-Dockerized microservices running inside AWS Lambda, RDS for user and API-key management, and
-API Gateway fronted by CloudFront. The system provides users with weather data and nearby events
-based on their location (retrieved from CloudFront headers).
+A cloud-native application featuring a custom API key management system, edge-based header transformation, and a serverless weather backend.
 
-⸻
-Architecture Overview
+## 🏗️ Architecture
 
-Frontend (EC2 Instance)
-One EC2 instance serves web pages:
-	1.	Login / Register Page
-	•	Allows users to create accounts and authenticate.
-	•	Interacts with RDS for user credentials and profile storage.
-	2.	User Dashboard
-	•	Displays user' API KEY
-	
-⸻
-Backend (Lambda + Docker on ECR)
+The application is structured into three primary layers to handle user management, request routing, and data delivery.
 
-All backend microservices are packaged as Docker images, stored in Amazon ECR, and run inside AWS Lambda.
+### 1. User Portal (EC2 Instance)
+* **Web Server:** Nginx serves as the frontend proxy.
+* **App Server:** Gunicorn runs the web application.
+* **Flow:** Users register or log in to access a dashboard where their unique **API Key** is generated and displayed.
 
-1. Weather Service Lambda
-	•	Pulls image from ECR.
-	•	Returns weather data based on the user’s location.
-	•	Location is extracted from CloudFront-Viewer-Country and similar geolocation headers.
+### 2. Edge Layer (CloudFront)
+* **Behaviors:** Routes requests based on path patterns: `/weather`, `/forecast`, and `/apiKeyInfo`.
+* **CloudFront Function:** For ease of use, the function intercepts the URL query parameter `?apikey=...` and converts it into a request header (`x-api-key`).
+* **Geo-Location:** CloudFront forwards viewer location headers to the backend to provide localized weather data without asking for user coordinates.
 
-2. Events Service Lambda
-	•	Pulls image from ECR.
-	•	Returns nearby events again based on user geolocation from CloudFront headers.
+### 3. Backend & Security (API Gateway + Lambda + RDS)
+* **Custom Authorizer:** A Lambda function triggered by API Gateway. It extracts the `x-api-key` from the headers and validates it against the **RDS** database.
+* **Logic:** * **Valid Key:** Request proceeds to the weather/info Lambdas.
+    * **Invalid Key:** Returns a `401 Unauthorized` response.
+* **Quota Management:** Each user starts with **1,000 API calls**. Every successful request decrements the count in the RDS.
 
-3. Authentication Lambda
-	•	Provides authentication logic for API Gateway.
-	•	Validates user credentials and API keys.
-	•	Integrated into API Gateway as a custom Lambda Authorizer.
+---
 
-⸻
-CloudFront
-	•	Distributes traffic globally.
-	•	Passes user geolocation to backend via headers such as:
-	•	CloudFront-Viewer-Country
-	•	CloudFront-Viewer-City (via geolocation features)
+## 🛠️ Infrastructure Details
 
-These headers are consumed by the Weather and Events Lambdas.
+### CloudFront Transformation Function
+This function allows the user to simply paste their key into the browser URL while the backend receives it as a secure header.
 
-⸻
-API Gateway
-	•	Exposes REST endpoints for:
-	•	/weather
-	•	/events
-	•	/auth
-	•	Uses the Authentication Lambda as a custom authorizer.
-	•	Connects downstream to Weather and Events Lambdas.
+```javascript
+function handler(event) {
+    var request = event.request;
+    var querystring = request.querystring;
 
-⸻
-RDS (Relational Database Service)
-
-Stores:
-	•	User credentials (email, password hash, API KEY)
-	•	User profile details
-	•	User API keys
-
-Connected via secure networking (private subnets, SGs, IAM roles).
-
-⸻
-Microservice Responsibilities
-
-Weather Service
-	•	Input: Location (lat/long and CloudFront city/country headers), API key (query string that gets converted to a header on cloudfront)
-	•	Output: JSON weather data
-	•	Dependencies: external weather API provider
-
-Events Service (in development)
-	•	Input: Same CloudFront geolocation data and api key
-	•	Output: List of events near the user
-	•	Dependencies: external events API provider
-
-Authentication Service
-Handles:
-	•	API key validation
-	•	Used as Lambda Authorizer in API Gateway
-
-⸻
-
-🔐 Security Overview
-	•	All API endpoints sit behind API Gateway with the custom Lambda authorizer.
-	•	EC2 instances run behind security groups with limited ingress.
-	•	API keys stored inside RDS.
-	•	CloudFront enforces HTTPS + geolocation header forwarding.
- (In development)
+    // Move apikey from URL param to Header
+    if (querystring.apikey) {
+        request.headers['x-api-key'] = { value: querystring.apikey.value };
+    }
+    
+    return request;
+}
